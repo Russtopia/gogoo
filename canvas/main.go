@@ -9,7 +9,7 @@ func main() {
 
   for {
     evint := <- chin;
-    fmt.Printf("Event: %s\n", evint.Description);
+    fmt.Println("event ", evint.Description, " for surface ", evint.SurfaceID);
   }
 
   ev := new(gocairo.Event);
