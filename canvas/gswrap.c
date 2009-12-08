@@ -197,7 +197,7 @@ void gcfree(gcevent *gcev) {
 
 
 
-gcsurface* gcnew_surface(void) {
+gcsurface* gcsurfacecreate(void) {
   gdk_threads_enter();
   gcsurface *s = malloc(sizeof(gcsurface));
   s->window = (void*)gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -205,20 +205,28 @@ gcsurface* gcnew_surface(void) {
   gcreset(s->window, NULL, NULL);
 
   gtk_widget_set_app_paintable((GtkWidget*)s->window, TRUE);
-  gtk_widget_set_events((GtkWidget*)s->window, gtk_widget_get_events((GtkWidget*)s->window) | GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK);
 
   int *sid = malloc(sizeof(int));
   (*sid) = gcsurface_id++;
   s->_id = *sid;
   g_signal_connect(G_OBJECT(s->window), "destroy", G_CALLBACK(gcclose), sid);
   g_signal_connect(G_OBJECT(s->window), "expose-event", G_CALLBACK(gcexpose), sid);
-  g_signal_connect(G_OBJECT(s->window), "motion-notify-event", G_CALLBACK(gcmotion), sid);
   g_signal_connect(G_OBJECT(s->window), "screen-changed", G_CALLBACK(gcreset), sid);
 
-  gtk_widget_show_all(GTK_WIDGET(s->window));
   gdk_threads_leave();
 
   return s;
+}
+
+void gcsurfaceshow(gcsurface *s) {
+  gtk_widget_show((GtkWidget*)s->window);
+}
+
+void gcsurfaceenablemm(gcsurface *s) {
+  gdk_threads_enter();
+  gtk_widget_set_events((GtkWidget*)s->window, gtk_widget_get_events((GtkWidget*)s->window) | GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK);
+  g_signal_connect(G_OBJECT(s->window), "motion-notify-event", G_CALLBACK(gcmotion), &(s->_id));
+  gdk_threads_leave();
 }
 
 

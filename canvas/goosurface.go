@@ -5,6 +5,7 @@ package goosurface
 */
 import "C"
 
+var garbage interface{};
 
 /*
  *  type definitions
@@ -115,10 +116,25 @@ func eventd(ch chan bool) {
  */
 func CreateSurface(d SurfaceDelegate) *Surface {
   s := new(Surface);
-  s._Pointer = C.gcnew_surface();
+  s._Pointer = C.gcsurfacecreate();
   s._Delegate = d;
   s._ID = int(s._Pointer._id);
   surfacemap[(s._ID)] = s;
+
+  // if the delegate has an Initialize method, call it
+  del, okinit := d.(surfaceDelegateInit);
+  if okinit {
+    del.Initialize(s);
+  }
+
+  // if the delegate needs mouse events, enable them in gtk
+  delmm, okmm := d.(surfaceDelegateMouseMotion);
+  if okmm {
+    garbage = delmm.(interface {});
+    C.gcsurfaceenablemm(s._Pointer);
+  }
+
+  C.gcsurfaceshow(s._Pointer);
 
   return s;
 }
