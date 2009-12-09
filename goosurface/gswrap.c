@@ -37,6 +37,21 @@ typedef struct {
   void *window;
 } gcsurface;
 
+typedef struct {
+  int w;
+  int h;
+} gcsize;
+
+typedef struct {
+  int x;
+  int y;
+} gcpoint;
+
+typedef struct {
+  gcsize size;
+  gcpoint origin;
+} gcrect;
+
 
 //
 // Callbacks
@@ -61,11 +76,27 @@ void gcreset(GtkWidget *widget, GdkScreen *oldscreen, gpointer userData) {
 }
 
 
+void gcbuttonpress(GtkWidget *widget, GdkEventButton *ev, gpointer udata) {
+  if(ev->button == 1) gcevent_send('1', *((int*)udata));
+  if(ev->button == 2) gcevent_send('2', *((int*)udata));
+  if(ev->button == 3) gcevent_send('3', *((int*)udata));
+}
+
+
+
+void gcbuttonrelease(GtkWidget *widget, GdkEventButton *ev, gpointer udata) {
+  if(ev->button == 1) gcevent_send('!', *((int*)udata));
+  if(ev->button == 2) gcevent_send('@', *((int*)udata));
+  if(ev->button == 3) gcevent_send('#', *((int*)udata));
+  if(ev->button == 4) gcevent_send('3', *((int*)udata));
+}
+
+
+
 // called when a new area of the gtk+ window becomes exposed
 gboolean gcexpose(GtkWidget *widget, GdkEventExpose *ev, gpointer udata) {
   //gint w, h;
   //gtk_window_get_size(GTK_WINDOW(widget), &w, &h);
-
   gcevent_send('e', *((int*)udata));
 
   return FALSE;
@@ -141,6 +172,20 @@ void gcshowtext(gcsurface *s, char *text) {
 }
 
 
+void gcrectangle(gcsurface *s, float x, float y, float w, float h) {
+  gdk_threads_enter();
+  cairo_rectangle((cairo_t*)s->context, x, y, w, h);
+  gdk_threads_leave();
+}
+
+
+void gcfill(gcsurface *s) {
+  gdk_threads_enter();
+  cairo_fill((cairo_t*)s->context);
+  gdk_threads_leave();
+}
+
+
 float gcmousex(void) {
   return gcmousepos[0];
 }
@@ -196,6 +241,15 @@ void gcfree(gcevent *gcev) {
 }
 
 
+void gcmsgbox(gcsurface *s, char *msg, char *title) {
+  GtkWidget *dialog = gtk_dialog_new_with_buttons(title, s->window, 0, NULL);
+  GtkWidget *label = gtk_label_new(msg);
+  gtk_container_add(GTK_CONTAINER(GTK_DIALOG(dialog)->vbox), label);
+  gtk_widget_show_all(dialog);
+  gtk_dialog_run(GTK_DIALOG(dialog));
+}
+
+
 
 gcsurface* gcsurfacecreate(void) {
   gdk_threads_enter();
@@ -211,10 +265,13 @@ gcsurface* gcsurfacecreate(void) {
   s->_id = *sid;
   g_signal_connect(G_OBJECT(s->window), "destroy", G_CALLBACK(gcclose), sid);
   g_signal_connect(G_OBJECT(s->window), "expose-event", G_CALLBACK(gcexpose), sid);
+  g_signal_connect(G_OBJECT(s->window), "configure-event", G_CALLBACK(gcexpose), sid);
   g_signal_connect(G_OBJECT(s->window), "screen-changed", G_CALLBACK(gcreset), sid);
+  g_signal_connect(G_OBJECT(s->window), "button-press-event", G_CALLBACK(gcbuttonpress), sid);
+  g_signal_connect(G_OBJECT(s->window), "button-release-event", G_CALLBACK(gcbuttonrelease), sid);
+  gtk_widget_set_events((GtkWidget*)s->window, gtk_widget_get_events((GtkWidget*)s->window) | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK);
 
   gdk_threads_leave();
-
   return s;
 }
 
@@ -229,5 +286,19 @@ void gcsurfaceenablemm(gcsurface *s) {
   gdk_threads_leave();
 }
 
+
+void gcsurfacesetsize(gcsurface *s, int width, int height) {
+  gdk_threads_enter();
+  gtk_window_set_default_size((GtkWindow*)s->window, width, height);
+  gdk_threads_leave();
+}
+
+gcsize* gcsurfacegetsize(gcsurface *s) {
+  gcsize *size = malloc(sizeof(gcsize));
+  gdk_threads_enter();
+  gtk_window_get_size((GtkWindow*)s->window, &(size->w), &(size->h));
+  gdk_threads_leave();
+  return size;
+}
 
 

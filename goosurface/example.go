@@ -1,16 +1,15 @@
 package main
 
 import "goosurface"
-import "strconv"
+import "fmt"
 
 
-type GooDelegate struct {
-}
+type GooDelegate struct {}
 
 // this method is required by surface delegates!
 func (self *GooDelegate) Draw(s *goosurface.Surface) {
   s.Begin();
-    s.Clear(0.5, 0.5, 1.0, 0.5);
+    s.Clear(0.0, 0.0, 0.0, 0.9);
   s.End();
 }
 
@@ -27,15 +26,11 @@ func (self *GooDelegate) Initialize(s *goosurface.Surface) {
 // knows to let gtk2 know that we want mouse motion events.
 func (self *GooDelegate) MouseMoved(s *goosurface.Surface, x float, y float) {
   s.Begin();
-    s.Clear(0.5, 0.5, 1.0, 0.5);
-    s.SetColor(0, 0, 0, 1);
+    s.Clear(0, 0, 0, 0.9);
+    s.SetColor(1, 1, 1, 0.8);
     s.MoveTo(40, 30);
-    s.SetFontSize(20);
-    str := "(";
-    str += strconv.Ftoa(x, 'f', -1);
-    str += ", ";
-    str += strconv.Ftoa(y, 'f', -1);
-    str += ")";
+    s.SetFontSize(16);
+    str := fmt.Sprintf("(%6.2f, %6.2f)", x, y);
     s.ShowText(str);
   s.End();
 }
@@ -46,15 +41,33 @@ func (self *GooDelegate) Closed(s *goosurface.Surface) {
   print("GooDelegate: one of them damn winders closed\n");
 }
 
+func (self *GooDelegate) ButtonDown(s *goosurface.Surface, b int) {
+  fmt.Printf("GooDelegate: button %d down\n", b);
+}
+
+func (self *GooDelegate) ButtonUp(s *goosurface.Surface, b int) {
+  fmt.Printf("GooDelegate: button %d up\n", b);
+  goosurface.MessageBox(s, "asdf", "asdf");
+}
 
 
-var s1, s2, s3 *goosurface.Surface;
 
+// main function
 func main() {
   goosurface.Initialize();
-    m := new(GooDelegate);
-    s1 = goosurface.CreateSurface(m);
-    s2 = goosurface.CreateSurface(m);
-    s3 = goosurface.CreateSurface(m);
-    goosurface.Begin();
+  d := new(GooDelegate);
+
+  s1 := goosurface.CreateSurface(d);
+  s1.SetSize(420, 240);
+  s1.Show();
+
+  s2 := goosurface.CreateSurface(d);
+  s2.SetSize(240, 420);
+  s2.Show();
+
+  goosurface.Begin();
 }
+
+
+
+

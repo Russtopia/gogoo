@@ -22,18 +22,27 @@ var garbage interface{};
   }
 
 
+  type Size struct {
+    Width float;
+    Height float;
+  }
+
+
   type SurfaceDelegate interface {
     Draw(*Surface);
   }
   type surfaceDelegateInit interface { Initialize(*Surface); }
   type surfaceDelegateClosed interface { Closed(*Surface); }
   type surfaceDelegateMouseMotion interface { MouseMoved(*Surface, float, float); }
+  type surfaceDelegateButtonDown interface { ButtonDown(*Surface, int); }
+  type surfaceDelegateButtonUp interface { ButtonUp(*Surface, int); }
 
 
   type Surface struct {
     _ID int;
     _Delegate SurfaceDelegate;
     _Pointer *C.gcsurface;
+    _Size Size;
   }
 
 
@@ -71,11 +80,10 @@ func guid(chout chan interface {}, chin chan interface {}, chev chan bool) {
   go inputd(chout); // input event daemon (for us)
 
   for {
-    select {                  // we either
-      case <- chev:           // wait for a gtk event to process
-        C.gciterate();
+    select {                       // we either
+      case <- chev: C.gciterate(); // wait for a gtk event to process
 
-      case evi := <-chin:     // or wait for commands from the backend
+      case evi := <-chin:          // or wait for commands from the backend
         ev, ok := evi.(*Event);
         if ok {
           print("command into gui: ", ((*Event)(ev))._Description, "\n");
@@ -134,8 +142,6 @@ func CreateSurface(d SurfaceDelegate) *Surface {
     C.gcsurfaceenablemm(s._Pointer);
   }
 
-  C.gcsurfaceshow(s._Pointer);
-
   return s;
 }
 
@@ -147,6 +153,16 @@ func (self *Surface) Begin() {
 
 func (self *Surface) End() {
   C.gcbegincontext(self._Pointer);
+}
+
+
+func (self *Surface) SetSize(w int, h int) {
+  C.gcsurfacesetsize(self._Pointer, C.int(w), C.int(h));
+}
+
+
+func (self *Surface) Show() {
+  C.gcsurfaceshow(self._Pointer);
 }
 
 
@@ -170,8 +186,23 @@ func (self *Surface) LineTo(x float, y float) {
 }
 
 
+func (self *Surface) Rectangle(x float, y float, w float, h float) {
+  C.gcrectangle(self._Pointer, C.float(x), C.float(y), C.float(w), C.float(h));
+}
+
+
 func (self *Surface) Stroke() {
   C.gcstroke(self._Pointer);
+}
+
+
+func (self *Surface) Fill() {
+  C.gcfill(self._Pointer);
+}
+
+
+func (self *Surface) Paint() {
+  C.gcfill(self._Pointer);
 }
 
 
@@ -182,6 +213,13 @@ func (self *Surface) SetFontSize(size int) {
 
 func (self *Surface) ShowText(text string) {
   C.gcshowtext(self._Pointer, C.CString(text));
+}
+
+
+func (self *Surface) UpdateSize() {
+  size := C.gcsurfacegetsize(self._Pointer);
+  self._Size.Width = float(size.w);
+  self._Size.Height = float(size.h);
 }
 
 
@@ -197,6 +235,7 @@ func Begin() {
 
     if ok {
       if ev._Description == "e" {
+        s.UpdateSize();
         s._Delegate.Draw(s);
       } else if ev._Description == "m" {
         delm, okdm := s._Delegate.(surfaceDelegateMouseMotion);
@@ -208,11 +247,36 @@ func Begin() {
       } else if ev._Description == "x" {
         surfacemap[s._ID] = nil;
         delx, okx := s._Delegate.(surfaceDelegateClosed);
-        if okx {
-          delx.Closed(s);
-        }
+        if okx { delx.Closed(s); }
+      } else if ev._Description == "1" {
+        del1, ok1 := s._Delegate.(surfaceDelegateButtonDown);
+        if ok1 { del1.ButtonDown(s, 1); }
+      } else if ev._Description == "2" {
+        del1, ok1 := s._Delegate.(surfaceDelegateButtonDown);
+        if ok1 { del1.ButtonDown(s, 2); }
+      } else if ev._Description == "3" {
+        del1, ok1 := s._Delegate.(surfaceDelegateButtonDown);
+        if ok1 { del1.ButtonDown(s, 3); }
+      } else if ev._Description == "!" {
+        del11, ok11 := s._Delegate.(surfaceDelegateButtonUp);
+        if ok11 { del11.ButtonUp(s, 1); }
+      } else if ev._Description == "@" {
+        del11, ok11 := s._Delegate.(surfaceDelegateButtonUp);
+        if ok11 { del11.ButtonUp(s, 2); }
+      } else if ev._Description == "#" {
+        del11, ok11 := s._Delegate.(surfaceDelegateButtonUp);
+        if ok11 { del11.ButtonUp(s, 3); }
       }
     }
   }
 }
+
+
+/*
+ *  Misc.
+ */
+func MessageBox(s *Surface, msg string, title string) {
+}
+
+
 
