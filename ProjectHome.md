@@ -1,0 +1,1 @@
+the goo is a collection of packages for the Go language that extend the language to include popular aspects of desktop programming.
